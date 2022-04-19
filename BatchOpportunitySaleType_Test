@@ -1,0 +1,177 @@
+@isTest
+public class BatchOpportunitySaleType_Test {
+    
+    
+    @testSetup
+    public static void setupTest(){
+        
+        
+        Account acct = new Account();
+        
+        acct.Name = 'test123';
+        
+        insert acct;   
+        
+        
+        Opportunity opp = TestDataFactory.createOpp(acct.id);
+        
+        
+    }
+    
+    static testMethod void moveOppToCloseWon_new(){
+        
+        Account acct = [SELECT id from Account LIMIT 1];
+        
+        Contact cont = TestDataFactory.createContact(acct.id);
+        
+        Opportunity newOpp = [SELECT ID, StageName from Opportunity LIMIT 1];
+        
+        
+        OpportunityContactRole contactRole = new OpportunityContactRole(ContactId = cont.id,
+                                                                        OpportunityId = newOpp.id);
+        
+        insert contactRole;
+        
+        newOpp.StageName = 'Closed Won';
+        
+        update newOpp;
+        
+        List<ID> oppIds = new List<ID>();
+        
+        oppIds.add(newOpp.id);
+        
+        List<BatchOpportunitySaleType_Invocable.request> requestList = new List<BatchOpportunitySaleType_Invocable.request>();
+        
+        BatchOpportunitySaleType_Invocable.request req = new BatchOpportunitySaleType_Invocable.request();
+        
+        req.oppIds = oppIds;
+        
+        requestList.add(req);
+        
+        Test.startTest();
+        BatchOpportunitySaleType_Invocable.setOppSaleType(requestList);
+        Test.stopTest();
+        
+    }
+    
+    static testMethod void moveOppToCloseWon_UpSell(){
+        
+        List<Opportunity> oppList = new List<Opportunity>();
+        
+        List<OpportunityContactRole> ocrList = new List<OpportunityContactRole>();
+        
+        Account acct = [SELECT id from Account LIMIT 1];
+        
+        Contact cont = TestDataFactory.createContact(acct.id);
+        
+        Opportunity existingOpp = TestDataFactory.createOpp(acct.id);
+        
+        OpportunityContactRole contactRole1 = new OpportunityContactRole(ContactId = cont.id,
+                                                                         OpportunityId = existingOpp.id);
+        
+        ocrList.add(contactRole1);
+        
+        Opportunity newOpp = [SELECT ID, StageName from Opportunity LIMIT 1];
+        
+        
+        OpportunityContactRole contactRole2 = new OpportunityContactRole(ContactId = cont.id,
+                                                                         OpportunityId = newOpp.id);
+        
+        ocrList.add(contactRole2);
+        
+        insert ocrList;
+        
+        existingOpp.Program__c = 'Fulfillment';
+        
+        existingOpp.StageName = 'Closed Won';
+        
+        oppList.add(existingOpp);
+        
+        newOpp.StageName = 'Closed Won';
+        
+        newOpp.Program__c = 'Fulfillment';
+        
+        oppList.add(newOpp);
+        
+        
+        update oppList;
+        
+        
+        List<ID> oppIds = new List<ID>();
+        
+        oppIds.add(newOpp.id);
+        
+        List<BatchOpportunitySaleType_Invocable.request> requestList = new List<BatchOpportunitySaleType_Invocable.request>();
+        
+        BatchOpportunitySaleType_Invocable.request req = new BatchOpportunitySaleType_Invocable.request();
+        
+        req.oppIds = oppIds;
+        
+        requestList.add(req);
+        
+        Test.startTest();
+        BatchOpportunitySaleType_Invocable.setOppSaleType(requestList);
+        Test.stopTest();
+    }
+    
+        static testMethod void moveOppToCloseWon_CrossSell(){
+        
+        List<Opportunity> oppList = new List<Opportunity>();
+        
+        List<OpportunityContactRole> ocrList = new List<OpportunityContactRole>();
+        
+        Account acct = [SELECT id from Account LIMIT 1];
+        
+        Contact cont = TestDataFactory.createContact(acct.id);
+        
+        Opportunity existingOpp = TestDataFactory.createOpp(acct.id);
+        
+        OpportunityContactRole contactRole1 = new OpportunityContactRole(ContactId = cont.id,
+                                                                         OpportunityId = existingOpp.id);
+        
+        ocrList.add(contactRole1);
+        
+        Opportunity newOpp = [SELECT ID, StageName from Opportunity LIMIT 1];
+        
+        
+        OpportunityContactRole contactRole2 = new OpportunityContactRole(ContactId = cont.id,
+                                                                         OpportunityId = newOpp.id);
+        
+        ocrList.add(contactRole2);
+        
+        insert ocrList;
+        
+        existingOpp.Program__c = 'Same Day';
+        
+        existingOpp.StageName = 'Closed Won';
+        
+        oppList.add(existingOpp);
+        
+        newOpp.StageName = 'Closed Won';
+        
+        newOpp.Program__c = 'Fulfillment';
+        
+        oppList.add(newOpp);
+        
+        
+        update oppList;
+        
+        
+        List<ID> oppIds = new List<ID>();
+        
+        oppIds.add(newOpp.id);
+        
+        List<BatchOpportunitySaleType_Invocable.request> requestList = new List<BatchOpportunitySaleType_Invocable.request>();
+        
+        BatchOpportunitySaleType_Invocable.request req = new BatchOpportunitySaleType_Invocable.request();
+        
+        req.oppIds = oppIds;
+        
+        requestList.add(req);
+        
+        Test.startTest();
+        BatchOpportunitySaleType_Invocable.setOppSaleType(requestList);
+        Test.stopTest();
+    }
+    
+}
