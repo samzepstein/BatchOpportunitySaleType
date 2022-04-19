@@ -1,0 +1,206 @@
+public class BatchOpportunitySaleType implements Database.Batchable<sObject>{
+    
+    public List<Id> oppIds;
+    
+    public BatchOpportunitySaleType(List<Id> oppIds){
+        this.oppIds = oppIds;
+        
+    }
+    
+    public Database.QueryLocator start(Database.BatchableContext BC){
+        
+        system.debug('oppIds: '+oppIds);
+        
+        String query = 'SELECT Id, AccountId, Program__c, Sale_Type__c FROM Opportunity WHERE Id in :oppIds';
+        
+        Database.QueryLocator qL = Database.getQueryLocator(query);
+        
+        return qL;
+    }
+    
+    
+    public List<Opportunity> opportunityRevenueType(List<Opportunity> oppList, Map<ID, List<Opportunity>> newOppMap, Map<ID, List<String>> upsellOppMap){
+        
+        
+        List<Opportunity> oppsToUpdate = new List<Opportunity>();
+        
+        List<String> currentOppProgramList = new List<String>();
+        
+        for(Opportunity opp : oppList){
+            
+            Id acctId = opp.AccountId;
+            
+            if(opp.Program__c.contains(';')){
+                
+                currentOppProgramList = opp.Program__c.split(';');
+                
+                system.debug('currentOppProgramList: '+currentOppProgramList);
+                
+            }
+            
+            else{
+                
+                currentOppProgramList.add(opp.Program__c);
+                
+            }
+            
+            
+            List<Opportunity> closedOpps = newOppMap.get(acctId);
+            
+            List<String> oppPrograms = upsellOppMap.get(acctId);
+            
+            system.debug('closedOpps: '+closedOpps);
+            
+            system.debug('oppPrograms: '+oppPrograms);
+            
+            
+            if(closedOpps == NULL){
+                
+                opp.Sale_Type__c = 'New';
+                
+                oppsToUpdate.add(opp);
+            }
+            
+            else if(oppPrograms != NULL){
+                
+                boolean Upsell = FALSE;
+                
+                system.debug('currentOppProgramList: '+currentOppProgramList);
+                
+                for(String program : currentOppProgramList){
+                    
+                    system.debug('program: '+program);
+                    
+                    if(oppPrograms.contains(program)){
+                        
+                        opp.Sale_Type__c = 'Upsell';
+                        
+                        oppsToUpdate.add(opp);
+                        
+                        Upsell = TRUE;
+                        
+                        break;
+                        
+                    }
+                    
+                }
+                
+                //if there are no matching programs, set rev type to Cross Sell
+                if(!Upsell){
+                    
+                    opp.Sale_Type__c = 'Cross Sell';
+                    
+                    oppsToUpdate.add(opp);
+                    
+                    break;
+
+                    
+                }
+                
+            }
+            
+            
+        }
+        
+        system.debug('oppsToUpdate: '+oppsToUpdate);
+        
+        return oppsToUpdate;
+        
+    }
+    
+    public void execute(Database.BatchableContext BC, List<Opportunity> oppList){
+        
+        system.debug('execute');
+        
+        Map<Opportunity, String> oppsToUpdate = new Map<Opportunity, String>();
+        
+        List<ID> accountIds = new List<ID>();
+        
+        for(Opportunity opp : oppList){
+            
+            accountIds.add(opp.AccountId);
+            
+        }
+        
+        List<Opportunity> relatedOpps = [SELECT ID, AccountId, RecordType.Name, StageName, Program__c 
+                                         FROM Opportunity 
+                                         WHERE AccountId in :accountIds
+                                         AND Id NOT in :oppList];
+        
+        //for checking if opp is new
+        Map<ID, List<Opportunity>> newOppMap = new Map<ID, List<Opportunity>>();
+        
+        //for checking if opp is upsell
+        Map<ID, List<String>> upsellOppMap = new Map<ID, List<String>>();
+        
+        
+        
+        for(Opportunity opp : relatedOpps){
+            
+            Id acctId = opp.AccountId;
+            
+            //used to determine new
+            if(opp.StageName == 'Closed Won'){
+                
+                List<Opportunity> closedOpps = newOppMap.containsKey(acctId) ? newOppMap.get(acctId) : new List<Opportunity>();
+                
+                closedOpps.add(opp);
+                
+                newOppMap.put(acctId, closedOpps);
+                
+                //used to determine upsell/cross-sell
+                if(opp.Program__c != NULL){
+                    
+                    List<String> programList = new List<String>();
+                    
+                    if(opp.Program__c.contains(';')){
+                        
+                        //populated if Program__c field has multiple values
+                        programList = opp.Program__c.split(';');
+                    }
+                    
+                    else{
+                        programList.add(opp.Program__c);
+                        
+                    }
+                    
+                    system.debug('programList: '+programList);
+                    
+                    List<String> programs = upsellOppMap.containsKey(acctId) ? upsellOppMap.get(acctId) : new List<String>();
+                    
+                    programs.addAll(programList);
+                    
+                    system.debug('programs: '+programs);
+                    
+                    upsellOppMap.put(acctId, programs);
+                    
+                    system.debug('upsellOppMap: '+upsellOppMap);
+                    
+                    
+                }
+                
+            }
+            
+            
+        }
+        
+        
+        List<Opportunity> oppsToUpdateList = opportunityRevenueType(oppList, newOppMap, upsellOppMap);
+        
+        system.debug('oppsToUpdateList: '+oppsToUpdateList);
+        
+        if(oppsToUpdateList.size() > 0){
+            
+            
+            
+            update oppsToUpdateList;
+        }
+        
+    }
+    
+    public void finish(Database.BatchableContext BC){
+        
+        system.debug('finish');
+        
+    }
+}
