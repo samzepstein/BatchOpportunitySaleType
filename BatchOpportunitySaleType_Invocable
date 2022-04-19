@@ -1,0 +1,27 @@
+public class BatchOpportunitySaleType_Invocable {
+    
+    public class request{
+        
+        @InvocableVariable(label='Opportunity Ids')
+        public List<ID> oppIds;
+        
+        
+    }
+    
+    @InvocableMethod(label='Set Opportunity Sal Type' description='Sets the Sale Type of the opportunity after its closed')
+    public static void setOppSaleType(List<request> requests) {
+        
+        
+        for(request request : requests){
+            
+            //Set<Id> oppIdSet = new Set<Id>(request.oppIds);
+            
+            system.debug('request: '+request);
+            
+            database.executeBatch(new BatchOpportunitySaleType(request.oppIds), 20);
+            
+        }
+        
+    }
+    
+}
